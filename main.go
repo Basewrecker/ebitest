@@ -17,41 +17,49 @@ type Vector struct {
 }
 
 type Game struct {
-	playerPosition Vector
+	player *Player
+}
+
+type Player struct {
+	position Vector
+	sprite   *ebiten.Image
 }
 
 func (g *Game) Update() error {
-	speed := 4.0
-
-	if ebiten.IsKeyPressed(ebiten.KeyDown) {
-		g.playerPosition.Y += speed
-	}
-
-	if ebiten.IsKeyPressed(ebiten.KeyUp) {
-		g.playerPosition.Y -= speed
-	}
-
-	if ebiten.IsKeyPressed(ebiten.KeyRight) {
-		g.playerPosition.X += speed
-	}
-
-	if ebiten.IsKeyPressed(ebiten.KeyLeft) {
-		g.playerPosition.X -= speed
-	}
-
+	g.player.Update()
 	return nil
 }
 
-// Drawing the sprites on the screen
-func (g *Game) Draw(screen *ebiten.Image) {
+// Player movement logic
+func (p *Player) Update() {
+	speed := 5.0
 
-	//animating the rotate
-	op := &ebiten.DrawImageOptions{}
-	op.GeoM.Translate(g.playerPosition.X, g.playerPosition.Y)
-	screen.DrawImage(PlayerSprite, op)
+	if ebiten.IsKeyPressed(ebiten.KeyDown) {
+		p.position.Y += speed
+	}
+	if ebiten.IsKeyPressed(ebiten.KeyUp) {
+		p.position.Y -= speed
+	}
+	if ebiten.IsKeyPressed(ebiten.KeyLeft) {
+		p.position.X -= speed
+	}
+	if ebiten.IsKeyPressed(ebiten.KeyRight) {
+		p.position.X += speed
+	}
 }
 
-func (g *Game) Layout(outsideWidth int, outsideHeight int) (screenWdith int, screenHeight int) {
+// drawing the sprites
+func (p *Player) Draw(screen *ebiten.Image) {
+	op := &ebiten.DrawImageOptions{}
+	op.GeoM.Translate(p.position.X, p.position.Y)
+	screen.DrawImage(p.sprite, op)
+}
+
+func (g *Game) Draw(screen *ebiten.Image) {
+	g.player.Draw(screen)
+}
+
+func (g *Game) Layout(outsideWidth int, outsideHeight int) (screenWidth int, screenHeight int) {
 	return 320, 240
 }
 
@@ -60,7 +68,7 @@ func main() {
 	ebiten.SetWindowTitle("Hello world")
 
 	g := &Game{
-		playerPosition: Vector{X: 100, Y: 100},
+		player: NewPlayer(),
 	}
 
 	if err := ebiten.RunGame(g); err != nil {
@@ -68,8 +76,14 @@ func main() {
 	}
 }
 
-// Sprite drawwing func
+func NewPlayer() *Player {
+	return &Player{
+		position: Vector{X: 100, Y: 100},
+		sprite:   PlayerSprite,
+	}
+}
 
+// Sprite loading func
 func mustLoadImage(name string) *ebiten.Image {
 	f, err := os.Open(name)
 	if err != nil {
@@ -81,6 +95,5 @@ func mustLoadImage(name string) *ebiten.Image {
 	if err != nil {
 		panic(err)
 	}
-
 	return ebiten.NewImageFromImage(img)
 }
