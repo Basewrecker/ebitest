@@ -21,6 +21,24 @@ type Game struct {
 }
 
 func (g *Game) Update() error {
+	speed := 4.0
+
+	if ebiten.IsKeyPressed(ebiten.KeyDown) {
+		g.playerPosition.Y += speed
+	}
+
+	if ebiten.IsKeyPressed(ebiten.KeyUp) {
+		g.playerPosition.Y -= speed
+	}
+
+	if ebiten.IsKeyPressed(ebiten.KeyRight) {
+		g.playerPosition.X += speed
+	}
+
+	if ebiten.IsKeyPressed(ebiten.KeyLeft) {
+		g.playerPosition.X -= speed
+	}
+
 	return nil
 }
 
