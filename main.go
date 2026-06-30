@@ -11,7 +11,14 @@ import (
 
 var PlayerSprite = mustLoadImage("assets/PNG/Players/Tiles/tile_0000.png")
 
-type Game struct{}
+type Vector struct {
+	X float64
+	Y float64
+}
+
+type Game struct {
+	playerPosition Vector
+}
 
 func (g *Game) Update() error {
 	return nil
@@ -19,7 +26,11 @@ func (g *Game) Update() error {
 
 // Drawing the sprites on the screen
 func (g *Game) Draw(screen *ebiten.Image) {
-	screen.DrawImage(PlayerSprite, nil)
+
+	//animating the rotate
+	op := &ebiten.DrawImageOptions{}
+	op.GeoM.Translate(g.playerPosition.X, g.playerPosition.Y)
+	screen.DrawImage(PlayerSprite, op)
 }
 
 func (g *Game) Layout(outsideWidth int, outsideHeight int) (screenWdith int, screenHeight int) {
@@ -29,7 +40,12 @@ func (g *Game) Layout(outsideWidth int, outsideHeight int) (screenWdith int, scr
 func main() {
 	ebiten.SetWindowSize(640, 480)
 	ebiten.SetWindowTitle("Hello world")
-	if err := ebiten.RunGame(&Game{}); err != nil {
+
+	g := &Game{
+		playerPosition: Vector{X: 100, Y: 100},
+	}
+
+	if err := ebiten.RunGame(g); err != nil {
 		log.Fatal(err)
 	}
 }
