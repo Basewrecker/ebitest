@@ -10,32 +10,31 @@ import (
 )
 
 // declaring the sprites
-
 var PlayerSprite = mustLoadImage("assets/PNG/Players/Tiles/tile_0001.png")
 var EnemySprite = mustLoadImage("assets/PNG/Players/Tiles/tile_0012.png")
 
 // constraints
-
 type Vector struct {
 	X float64
 	Y float64
 }
 
 const (
-	ScreenWidth  = 530
-	ScreenHeight = 480
+	ScreenWidth  = 1000
+	ScreenHeight = 1000
+	SpriteScale  = 4.0
 )
 
 // constructors
-
 type Game struct {
 	player *Player
 	enemy  *Enemy
 }
 
 type Player struct {
-	position Vector
-	sprite   *ebiten.Image
+	position         Vector
+	previousPosition Vector
+	sprite           *ebiten.Image
 }
 
 type Enemy struct {
@@ -48,16 +47,20 @@ func (g *Game) Update() error {
 
 	w, h := g.Layout(0, 0)
 
-	if g.player.position.X < 0 {
-		g.player.position.X = 0
-	} else if g.player.position.X > float64(w-g.player.sprite.Bounds().Dx()) {
-		g.player.position.X = float64(w - g.player.sprite.Bounds().Dx())
-	}
+	clampToScreen(&g.player.position, g.player.sprite, w, h)
+	clampToScreen(&g.enemy.position, g.enemy.sprite, w, h)
 
-	if g.player.position.Y < 0 {
-		g.player.position.Y = 0
-	} else if g.player.position.Y > float64(h-g.player.sprite.Bounds().Dy()) {
-		g.player.position.Y = float64(h - g.player.sprite.Bounds().Dy())
+	// scale-aware collision dimensions
+	pw := float64(g.player.sprite.Bounds().Dx()) * SpriteScale
+	ph := float64(g.player.sprite.Bounds().Dy()) * SpriteScale
+	ew := float64(g.enemy.sprite.Bounds().Dx()) * SpriteScale
+	eh := float64(g.enemy.sprite.Bounds().Dy()) * SpriteScale
+
+	if rectsOverlap(
+		g.player.position.X, g.player.position.Y, pw, ph,
+		g.enemy.position.X, g.enemy.position.Y, ew, eh,
+	) {
+		g.player.position = g.player.previousPosition
 	}
 
 	return nil
@@ -65,8 +68,9 @@ func (g *Game) Update() error {
 
 // Player movement logic
 func (p *Player) Update() {
-	speed := 5.0
+	p.previousPosition = p.position
 
+	speed := 9.0
 	if ebiten.IsKeyPressed(ebiten.KeyDown) {
 		p.position.Y += speed
 	}
@@ -79,22 +83,22 @@ func (p *Player) Update() {
 	if ebiten.IsKeyPressed(ebiten.KeyRight) {
 		p.position.X += speed
 	}
-
 }
 
 // drawing the player sprite
 func (p *Player) Draw(screen *ebiten.Image) {
 	op := &ebiten.DrawImageOptions{}
+	op.GeoM.Scale(SpriteScale, SpriteScale)
 	op.GeoM.Translate(p.position.X, p.position.Y)
 	screen.DrawImage(p.sprite, op)
 }
 
 // drawing the enemy sprite
-
-func (p *Enemy) Draw(screen *ebiten.Image) {
+func (e *Enemy) Draw(screen *ebiten.Image) {
 	op := &ebiten.DrawImageOptions{}
-	op.GeoM.Translate(p.position.X, p.position.Y)
-	screen.DrawImage(p.sprite, op)
+	op.GeoM.Scale(SpriteScale, SpriteScale)
+	op.GeoM.Translate(e.position.X, e.position.Y)
+	screen.DrawImage(e.sprite, op)
 }
 
 func (g *Game) Draw(screen *ebiten.Image) {
@@ -107,7 +111,7 @@ func (g *Game) Layout(outsideWidth int, outsideHeight int) (int, int) {
 }
 
 func main() {
-	ebiten.SetWindowSize(530, 480)
+	ebiten.SetWindowSize(1000, 1000)
 	ebiten.SetWindowTitle("Hello world")
 
 	g := &Game{
@@ -129,7 +133,7 @@ func NewPlayer() *Player {
 
 func NewEnemy() *Enemy {
 	return &Enemy{
-		position: Vector{X: 150, Y: 150},
+		position: Vector{X: 300, Y: 300},
 		sprite:   EnemySprite,
 	}
 }
@@ -147,4 +151,29 @@ func mustLoadImage(name string) *ebiten.Image {
 		panic(err)
 	}
 	return ebiten.NewImageFromImage(img)
+}
+
+func clampToScreen(position *Vector, sprite *ebiten.Image, w, h int) {
+	spriteW := float64(sprite.Bounds().Dx()) * SpriteScale
+	spriteH := float64(sprite.Bounds().Dy()) * SpriteScale
+
+	if position.X < 0 {
+		position.X = 0
+	} else if position.X > float64(w)-spriteW {
+		position.X = float64(w) - spriteW
+	}
+
+	if position.Y < 0 {
+		position.Y = 0
+	} else if position.Y > float64(h)-spriteH {
+		position.Y = float64(h) - spriteH
+	}
+}
+
+// collision detection using axis aligned bounding box
+func rectsOverlap(ax, ay, aw, ah, bx, by, bw, bh float64) bool {
+	return ax < bx+bw &&
+		ax+aw > bx &&
+		ay < by+bh &&
+		ay+ah > by
 }
